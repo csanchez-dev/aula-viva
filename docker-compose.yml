@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: aula-viva-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: aula
+      POSTGRES_PASSWORD: aula
+      POSTGRES_DB: aula_viva
+    ports:
+      - "5433:5432" # 5433 fuera: no choca con un PostgreSQL instalado en Windows
+    volumes:
+      - aula-viva-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aula -d aula_viva"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  aula-viva-data:

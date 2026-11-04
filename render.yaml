@@ -1,0 +1,64 @@
+# Render Blueprint: infraestructura como código para la API y su base de datos.
+# Render lee este archivo al crear el Blueprint (Dashboard → New → Blueprint) y en cada push.
+# Referencia: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: aula-viva-api
+    runtime: node
+    plan: free
+    region: frankfurt # la más cercana a España
+    # El repo es un monorepo: construimos desde la raíz para que npm resuelva los workspaces.
+    # --include=dev porque NODE_ENV=production haría que npm omitiera tsup/tsx, necesarios para compilar.
+    buildCommand: npm ci --include=dev && npm run build -w @aula-viva/api
+    # Aplica migraciones pendientes y arranca. (En el plan free no hay "pre-deploy command".)
+    startCommand: npm run start:prod -w @aula-viva/api
+    healthCheckPath: /api/health
+    # Despliega solo cuando el CI de GitHub (typecheck + tests) pasa en verde.
+    autoDeployTrigger: checksPass
+    # Un cambio solo en el frontend no redespliega la API.
+    buildFilter:
+      paths:
+        - apps/api/**
+        - packages/**
+        - package.json
+        - package-lock.json
+        - render.yaml
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: aula-viva-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true # Render genera un secreto aleatorio de 256 bits
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      # Peticiones que llegan: navegador → Netlify (proxy) → balanceador de Render → API.
+      - key: TRUST_PROXY
+        value: "2"
+      - key: WEB_ORIGIN
+        sync: false # Render te lo pide al crear: la URL de Netlify, p. ej. https://aula-viva.netlify.app
+      - key: AI_PROVIDER
+        value: mock # cámbialo a "anthropic" cuando añadas la clave
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: AI_MODEL_SMART
+        value: claude-sonnet-5-5
+      - key: AI_MODEL_FAST
+        value: claude-haiku-5-5
+      - key: QUOTA_FREE_PER_DAY
+        value: "10"
+      - key: QUOTA_PRO_PER_DAY
+        value: "200"
+
+databases:
+  - name: aula-viva-db
+    plan: free # ¡ojo! las bases de datos free de Render caducan a los 30 días
+    region: frankfurt
+    databaseName: aula_viva
+    user: aula
+    postgresMajorVersion: "17"

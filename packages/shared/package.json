@@ -1,0 +1,13 @@
+{
+  "name": "@aula-viva/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Contratos compartidos entre frontend y backend: esquemas de validación, tipos y reglas puras.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "zod": "^3.25.0"
+  }
+}

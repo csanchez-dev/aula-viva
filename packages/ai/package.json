@@ -1,0 +1,15 @@
+{
+  "name": "@aula-viva/ai",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Motor de IA: prompts, proveedores de modelos (Anthropic y simulado) y validación de lo que devuelve el modelo.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.2.0",
+    "@aula-viva/shared": "*",
+    "zod": "^3.25.0"
+  }
+}

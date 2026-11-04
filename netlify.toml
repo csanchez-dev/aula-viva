@@ -1,0 +1,30 @@
+# Configuración de Netlify para el frontend (apps/web).
+# El sitio se construye desde la raíz del monorepo para que npm resuelva los workspaces.
+
+[build]
+  command = "npm run build -w @aula-viva/web"
+  publish = "apps/web/dist"
+  # Si en el commit no cambió nada del frontend, Netlify se salta el build (ahorra minutos de build).
+  # git diff --quiet sale con 0 cuando no hay cambios, y 0 significa "ignorar este build".
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- apps/web packages/shared netlify.toml package.json package-lock.json"
+
+[build.environment]
+  NODE_VERSION = "22"
+  # API_ORIGIN se define en el panel de Netlify (Site configuration → Environment variables),
+  # por ejemplo https://aula-viva-api.onrender.com. El script write-redirects.mjs lo usa
+  # para generar el proxy /api/* → Render.
+
+# Los archivos de /assets llevan un hash en el nombre: se pueden cachear para siempre.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Cabeceras de seguridad básicas para todas las páginas.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"

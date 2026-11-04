@@ -1,0 +1,28 @@
+{
+  "name": "aula-viva",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Plataforma de aprendizaje basado en juegos con IA para estudiantes de nicho (MVP: medicina).",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=22.9"
+  },
+  "scripts": {
+    "dev": "concurrently -n api,web -c cyan,magenta \"npm run dev -w @aula-viva/api\" \"npm run dev -w @aula-viva/web\"",
+    "build": "npm run build -w @aula-viva/api && npm run build -w @aula-viva/web",
+    "typecheck": "tsc -b",
+    "test": "vitest run",
+    "db:up": "docker compose up -d db",
+    "db:migrate": "npm run migrate -w @aula-viva/api"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "concurrently": "^9.1.0",
+    "typescript": "~5.8.3",
+    "vitest": "^3.2.4"
+  }
+}
