@@ -2,13 +2,17 @@ import { CreateTopicSchema, NOTES_MAX_CHARS, NOTES_MIN_CHARS } from "@aula-viva/
 import { type ChangeEvent, type FormEvent, useRef, useState } from "react";
 import { api, errorText, waitForJob } from "../../api/client";
 import { navigate } from "../../lib/router";
+import { FileIcon } from "./FileIcon";
 
 const SUBJECTS = [
   "Anatomía", "Bioquímica", "Farmacología", "Fisiología", "Histología", "Microbiología",
   "Patología", "Semiología", "Medicina interna", "Cirugía", "Pediatría", "Ginecología y obstetricia", "Psiquiatría",
 ];
 
-const MAX_PDF_BYTES = 10 * 1024 * 1024;
+const MAX_FILE_BYTES = 10 * 1024 * 1024;
+
+type FileKind = "pdf" | "docx";
+const FILE_LABEL: Record<FileKind, string> = { pdf: "PDF", docx: "DOCX" };
 
 function toBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -19,7 +23,7 @@ function toBase64(file: File): Promise<string> {
   });
 }
 
-type Phase = { kind: "editing" } | { kind: "reading" } | { kind: "generating"; seconds: number };
+type Phase = { kind: "editing" } | { kind: "reading"; file: FileKind } | { kind: "generating"; seconds: number };
 
 export function NewTopicPage({ onUsage }: { onUsage: () => void }) {
   const [title, setTitle] = useState("");
@@ -28,23 +32,26 @@ export function NewTopicPage({ onUsage }: { onUsage: () => void }) {
   const [phase, setPhase] = useState<Phase>({ kind: "editing" });
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
-  const fileInput = useRef<HTMLInputElement>(null);
+  const pdfInput = useRef<HTMLInputElement>(null);
+  const docxInput = useRef<HTMLInputElement>(null);
 
-  async function onPdf(e: ChangeEvent<HTMLInputElement>) {
+  async function onFile(kind: FileKind, e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
     setError("");
     setInfo("");
-    if (file.size > MAX_PDF_BYTES) return setError("El PDF no puede pasar de 10 MB.");
-    setPhase({ kind: "reading" });
+    const label = FILE_LABEL[kind];
+    if (file.size > MAX_FILE_BYTES) return setError(`El ${label} no puede pasar de 10 MB.`);
+    setPhase({ kind: "reading", file: kind });
     try {
-      const result = await api.extractPdf(file.name, await toBase64(file));
+      const data = await toBase64(file);
+      const result = kind === "pdf" ? await api.extractPdf(file.name, data) : await api.extractDocx(file.name, data);
       setNotes(result.text);
-      if (!title) setTitle(file.name.replace(/\.pdf$/i, "").replace(/[_-]+/g, " ").slice(0, 120));
+      if (!title) setTitle(file.name.replace(/\.(pdf|docx)$/i, "").replace(/[_-]+/g, " ").slice(0, 120));
       setInfo(
-        `Leídas ${result.pages} página${result.pages === 1 ? "" : "s"}.` +
-          (result.truncated ? ` El texto se recortó a ${NOTES_MAX_CHARS.toLocaleString("es")} caracteres: divide el PDF en temas más pequeños.` : "") +
+        ("pages" in result ? `Leídas ${result.pages} página${result.pages === 1 ? "" : "s"}.` : "Documento leído.") +
+          (result.truncated ? ` El texto se recortó a ${NOTES_MAX_CHARS.toLocaleString("es")} caracteres: divide el ${label} en temas más pequeños.` : "") +
           " Revisa el texto y quita lo que no quieras estudiar (índices, bibliografía…).",
       );
     } catch (err) {
@@ -118,10 +125,24 @@ export function NewTopicPage({ onUsage }: { onUsage: () => void }) {
       <div className="field">
         <div className="field-head">
           <label htmlFor="notes">Apuntes</label>
-          <button type="button" className="ghost small" onClick={() => fileInput.current?.click()} disabled={phase.kind === "reading"}>
-            {phase.kind === "reading" ? "Leyendo PDF…" : "Subir PDF"}
-          </button>
-          <input ref={fileInput} type="file" accept="application/pdf,.pdf" hidden onChange={(e) => void onPdf(e)} />
+          <div className="upload-buttons">
+            <button type="button" className="ghost small" onClick={() => pdfInput.current?.click()} disabled={phase.kind === "reading"}>
+              <FileIcon kind="pdf" />
+              {phase.kind === "reading" && phase.file === "pdf" ? "Leyendo PDF…" : "Subir PDF"}
+            </button>
+            <button type="button" className="ghost small" onClick={() => docxInput.current?.click()} disabled={phase.kind === "reading"}>
+              <FileIcon kind="docx" />
+              {phase.kind === "reading" && phase.file === "docx" ? "Leyendo DOCX…" : "Subir DOCX"}
+            </button>
+          </div>
+          <input ref={pdfInput} type="file" accept="application/pdf,.pdf" hidden onChange={(e) => void onFile("pdf", e)} />
+          <input
+            ref={docxInput}
+            type="file"
+            accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            hidden
+            onChange={(e) => void onFile("docx", e)}
+          />
         </div>
         <textarea
           id="notes"

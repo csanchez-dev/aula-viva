@@ -1,8 +1,28 @@
 import { type CompletionRequest, type LlmClient, LlmUnavailableError } from "@aula-viva/ai";
+import JSZip from "jszip";
 import request from "supertest";
 import { describe, expect, it } from "vitest";
 import { createApp } from "../src/interfaces/http/app";
 import { buildTestDeps } from "./in-memory";
+
+/** Construye un .docx mínimo (un párrafo por elemento) para probar la extracción real con mammoth. */
+async function buildDocx(paragraphs: string[]): Promise<Buffer> {
+  const zip = new JSZip();
+  zip.file(
+    "[Content_Types].xml",
+    `<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>`,
+  );
+  zip.file(
+    "_rels/.rels",
+    `<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`,
+  );
+  const body = paragraphs.map((p) => `<w:p><w:r><w:t xml:space="preserve">${p}</w:t></w:r></w:p>`).join("");
+  zip.file(
+    "word/document.xml",
+    `<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}</w:body></w:document>`,
+  );
+  return zip.generateAsync({ type: "nodebuffer" });
+}
 
 const student = { name: "Ana Pérez", email: "ana@uni.es", password: "corazon12345" };
 
@@ -103,6 +123,26 @@ describe("temas y generación de tarjetas", () => {
     expect(ok.body.text).toContain("tamsulosina");
     const bad = await agent.post("/api/notes/extract").send({ fileName: "x.pdf", dataBase64: Buffer.from("hola").toString("base64") }).expect(400);
     expect(bad.body.error.message).toMatch(/no es un PDF/);
+  });
+
+  it("extrae el texto de un DOCX y rechaza archivos que no lo son", async () => {
+    const { agent } = await signedIn();
+    const docx = (await buildDocx(NOTES.split("\n\n"))).toString("base64");
+    const ok = await agent.post("/api/notes/extract-docx").send({ fileName: "hpb.docx", dataBase64: docx }).expect(200);
+    expect(ok.body.text).toContain("tamsulosina");
+    expect(ok.body.text).toContain("oxibutinina");
+    expect(ok.body.truncated).toBe(false);
+
+    const notDocx = Buffer.from("hola, esto no es un docx").toString("base64");
+    const bad = await agent.post("/api/notes/extract-docx").send({ fileName: "x.docx", dataBase64: notDocx }).expect(400);
+    expect(bad.body.error.message).toMatch(/no es un DOCX/);
+
+    // Un ZIP cualquiera tiene la firma correcta, pero no es un documento de Word.
+    const zip = new JSZip();
+    zip.file("hola.txt", "hola");
+    const fakeZip = (await zip.generateAsync({ type: "nodebuffer" })).toString("base64");
+    const unreadable = await agent.post("/api/notes/extract-docx").send({ fileName: "x.docx", dataBase64: fakeZip }).expect(400);
+    expect(unreadable.body.error.message).toMatch(/No se pudo leer el DOCX/);
   });
 
   it("nadie puede ver el tema de otra persona", async () => {

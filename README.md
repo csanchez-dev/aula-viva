@@ -1,6 +1,6 @@
 # Aula Viva
 
-**Repaso anti-olvido para estudiantes de medicina.** El estudiante sube sus apuntes (texto o PDF), la IA los convierte en flashcards y preguntas tipo examen que citan el fragmento del que salen, y un algoritmo de repaso espaciado (FSRS) le pide repasar cada día justo lo que está a punto de olvidar.
+**Repaso anti-olvido para estudiantes de medicina.** El estudiante sube sus apuntes (texto, PDF o DOCX), la IA los convierte en flashcards y preguntas tipo examen que citan el fragmento del que salen, y un algoritmo de repaso espaciado (FSRS) le pide repasar cada día justo lo que está a punto de olvidar.
 
 El MVP sale de una encuesta a estudiantes de 4.º de Medicina: olvidar lo estudiado es el problema que comparten todos, y las funciones más pedidas son flashcards con repaso espaciado, quizzes con explicación y generar desde sus propios apuntes.
 
@@ -10,7 +10,7 @@ Modelo de negocio: freemium con cuota diaria de generaciones con IA (plan gratis
 
 ## El ciclo de uso
 
-1. **Nuevo tema:** pega los apuntes o sube un PDF (se extrae el texto para revisarlo antes).
+1. **Nuevo tema:** pega los apuntes o sube un PDF o un DOCX de Word (se extrae el texto para revisarlo antes).
 2. **Generación:** los apuntes se dividen en fragmentos numerados; la IA crea tarjetas usando solo esos fragmentos y cada tarjeta guarda de cuál sale.
 3. **Revisión:** el estudiante edita, suspende o borra las tarjetas que no le convenzan.
 4. **Repaso diario:** una cola con lo que vence hoy y hasta 20 tarjetas nuevas al día. Tras ver la respuesta, el estudiante valora (Otra vez, Difícil, Bien, Fácil) y FSRS calcula cuándo vuelve.
@@ -40,7 +40,7 @@ aula-viva/
 apps/api/src/
 ├── domain/           Reglas puras: usuario, cuota, estado de memoria de una tarjeta y resumen de progreso.
 ├── application/      Casos de uso (CreateTopic, GetReviewQueue, ReviewCard…) y puertos (interfaces).
-├── infrastructure/   PostgreSQL, FSRS (ts-fsrs), extracción de PDF (unpdf), bcrypt, JWT, migraciones.
+├── infrastructure/   PostgreSQL, FSRS (ts-fsrs), extracción de PDF (unpdf) y DOCX (mammoth), bcrypt, JWT, migraciones.
 ├── interfaces/http/  Express: rutas, middlewares, traducción de errores.
 ├── container.ts      Composition root: conecta las implementaciones (inyección de dependencias).
 └── main.ts           Arranque y cierre ordenado.
@@ -93,6 +93,7 @@ Todas las rutas cuelgan de `/api`. La sesión viaja en una cookie `httpOnly`.
 | GET | `/me` | Perfil y cuota del día |
 | GET | `/dashboard` | Pantalla Hoy: pendientes, nuevas disponibles, repasadas hoy y progreso por tema |
 | POST | `/notes/extract` | Extrae el texto de un PDF (base64, máx. 10 MB) |
+| POST | `/notes/extract-docx` | Extrae el texto de un DOCX de Word (base64, máx. 10 MB) |
 | POST | `/topics` | Crea un tema y lanza la generación (consume cuota). Responde `202` con el trabajo |
 | GET / DELETE | `/topics/:id` | Tema con progreso, tarjetas y última generación / borrarlo |
 | POST | `/topics/:id/generate` | Más tarjetas de los mismos apuntes, sin repetir (consume cuota) |

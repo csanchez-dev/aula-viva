@@ -30,12 +30,14 @@ import {
   CardGeneration,
   CreateTopic,
   DeleteTopic,
+  ExtractDocxText,
   ExtractPdfText,
   GenerateMoreCards,
   GetGenerationJob,
 } from "../src/application/use-cases/topics";
 import { NEW_SCHEDULING, type SchedulingState } from "../src/domain/scheduling";
 import type { User } from "../src/domain/user";
+import { MammothDocxExtractor } from "../src/infrastructure/docx-extractor";
 import { FsrsScheduler } from "../src/infrastructure/fsrs-scheduler";
 import { JwtTokenService } from "../src/infrastructure/security/jwt-token-service";
 import type { HttpDeps } from "../src/interfaces/http/use-cases";
@@ -300,6 +302,7 @@ export function buildTestDeps(options: { freePerDay?: number; llm?: LlmClient } 
       login: new LoginUser(users, fakeHasher, tokens),
       getMe: new GetMe(users, quota),
       extractPdf: new ExtractPdfText(fakePdf),
+      extractDocx: new ExtractDocxText(new MammothDocxExtractor()),
       createTopic: new CreateTopic(users, topics, generation),
       getTopic: new GetTopic(topics, cards, jobs, scheduler, clock),
       deleteTopic: new DeleteTopic(topics),

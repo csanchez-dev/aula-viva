@@ -2,6 +2,7 @@ import { LlmBadOutputError, LlmUnavailableError } from "@aula-viva/ai";
 import {
   type CreateTopicInput,
   type ErrorCode,
+  type ExtractDocxResult,
   type ExtractPdfResult,
   type GenerationJob,
   NOTES_MAX_CHARS,
@@ -16,6 +17,7 @@ import type {
   CardRepository,
   CardSchedulingRow,
   Clock,
+  DocxTextExtractor,
   JobRepository,
   NewCard,
   PdfTextExtractor,
@@ -189,14 +191,47 @@ export class ExtractPdfText {
     } catch {
       throw new AppError("VALIDATION_ERROR", "No se pudo leer el PDF. Prueba a copiar y pegar el texto.");
     }
-    const text = result.text.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+    const text = tidyExtractedText(result.text);
     if (text.length < 50) {
       throw new AppError(
         "VALIDATION_ERROR",
         "El PDF no tiene texto seleccionable (parece escaneado). Copia y pega el texto o usa otro archivo.",
       );
     }
-    const truncated = text.length > NOTES_MAX_CHARS;
-    return { text: truncated ? text.slice(0, NOTES_MAX_CHARS) : text, pages: result.pages, truncated };
+    return { ...truncateNotes(text), pages: result.pages };
   }
+}
+
+/** Extrae el texto de un documento de Word (.docx) para que el estudiante lo revise antes de crear el tema. */
+export class ExtractDocxText {
+  constructor(private readonly extractor: DocxTextExtractor) {}
+
+  async execute(base64: string): Promise<ExtractDocxResult> {
+    const data = Buffer.from(base64, "base64");
+    // Un .docx es un ZIP: empieza por "PK\x03\x04". El .doc antiguo es otro formato y no se admite.
+    if (data.subarray(0, 4).toString("latin1") !== "PK\x03\x04") {
+      throw new AppError("VALIDATION_ERROR", "El archivo no es un DOCX válido. Si es un .doc antiguo, guárdalo como .docx.");
+    }
+    let raw: string;
+    try {
+      raw = (await this.extractor.extract(new Uint8Array(data))).text;
+    } catch {
+      throw new AppError("VALIDATION_ERROR", "No se pudo leer el DOCX. Prueba a copiar y pegar el texto.");
+    }
+    const text = tidyExtractedText(raw);
+    if (text.length < 50) {
+      throw new AppError("VALIDATION_ERROR", "El DOCX casi no tiene texto. Copia y pega los apuntes o usa otro archivo.");
+    }
+    return truncateNotes(text);
+  }
+}
+
+/** Quita espacios al final de las líneas y deja como mucho una línea en blanco seguida. */
+function tidyExtractedText(text: string): string {
+  return text.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function truncateNotes(text: string): { text: string; truncated: boolean } {
+  const truncated = text.length > NOTES_MAX_CHARS;
+  return { text: truncated ? text.slice(0, NOTES_MAX_CHARS) : text, truncated };
 }

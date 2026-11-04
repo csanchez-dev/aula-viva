@@ -14,6 +14,7 @@ import type { CreateTheme, GetActiveTheme, ListThemes, SetActiveTheme } from "..
 import type {
   CreateTopic,
   DeleteTopic,
+  ExtractDocxText,
   ExtractPdfText,
   GenerateMoreCards,
   GetGenerationJob,
@@ -32,6 +33,7 @@ export interface HttpDeps {
     getMe: GetMe;
     // Temas y generación
     extractPdf: ExtractPdfText;
+    extractDocx: ExtractDocxText;
     createTopic: CreateTopic;
     getTopic: GetTopic;
     deleteTopic: DeleteTopic;

@@ -131,6 +131,15 @@ button:disabled, .button.disabled { opacity: 0.45; cursor: not-allowed; pointer-
 .ghost { background: var(--surface); color: var(--fg); border-color: var(--line); }
 .danger { background: var(--bad); color: #fff; }
 .small { padding: 6px 12px; font-size: 14px; }
+
+/* Iconos de archivo (PDF / DOCX) en los botones de subida. */
+.upload-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+.file-icon { flex: none; color: var(--muted); }
+.file-icon-tag { fill: var(--file-tag); }
+.file-icon.pdf { --file-tag: var(--fading); }
+.file-icon.docx { --file-tag: var(--accent); }
+.file-icon-label { fill: var(--on-accent); font-family: var(--body); font-size: 5.6px; font-weight: 700; letter-spacing: 0.2px; }
+.ghost:hover .file-icon { color: var(--fg); }
 .big { padding: 14px 22px; font-size: 17px; }
 .link { background: none; border: none; padding: 0; color: var(--accent); font-weight: 700; font-size: 14px; }
 .danger-text { color: var(--bad); }

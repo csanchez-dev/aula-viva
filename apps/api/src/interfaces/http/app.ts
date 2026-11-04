@@ -14,10 +14,11 @@ export function createApp(deps: HttpDeps): Express {
   app.set("trust proxy", deps.trustProxy);
   app.use(helmet());
   app.use(cors({ origin: deps.webOrigin, credentials: true }));
-  // Límite pequeño para todo salvo la subida de PDF (base64 de hasta 10 MB).
+  // Límite pequeño para todo salvo la subida de PDF o DOCX (base64 de hasta 10 MB).
   const smallJson = express.json({ limit: "512kb" });
-  const pdfJson = express.json({ limit: "15mb" });
-  app.use((req, res, next) => (req.path === "/api/notes/extract" ? pdfJson : smallJson)(req, res, next));
+  const fileJson = express.json({ limit: "15mb" });
+  const fileUploads = new Set(["/api/notes/extract", "/api/notes/extract-docx"]);
+  app.use((req, res, next) => (fileUploads.has(req.path) ? fileJson : smallJson)(req, res, next));
   app.use(cookieParser());
 
   // Comprobación de vida (Render la usa para saber si la API está lista).

@@ -1,5 +1,6 @@
 import {
   CreateTopicSchema,
+  ExtractDocxSchema,
   ExtractPdfSchema,
   LoginSchema,
   PlanSchema,
@@ -71,6 +72,12 @@ export function buildRouter(deps: HttpDeps): Router {
   router.post("/notes/extract", requireAuth, async (req, res) => {
     const { dataBase64 } = parse(ExtractPdfSchema, req.body);
     res.json(await uc.extractPdf.execute(dataBase64));
+  });
+
+  // Lo mismo para documentos de Word (.docx).
+  router.post("/notes/extract-docx", requireAuth, async (req, res) => {
+    const { dataBase64 } = parse(ExtractDocxSchema, req.body);
+    res.json(await uc.extractDocx.execute(dataBase64));
   });
 
   // Crea el tema y responde 202 con el trabajo de generación; el cliente consulta GET /jobs/:id.

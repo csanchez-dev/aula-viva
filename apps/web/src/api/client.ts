@@ -5,6 +5,7 @@ import {
   type Dashboard,
   ERROR_MESSAGES,
   type ErrorCode,
+  type ExtractDocxResult,
   type ExtractPdfResult,
   type GenerationJob,
   type LoginInput,
@@ -64,6 +65,8 @@ export const api = {
   dashboard: () => request<Dashboard>("GET", "/dashboard"),
   extractPdf: (fileName: string, dataBase64: string) =>
     request<ExtractPdfResult>("POST", "/notes/extract", { fileName, dataBase64 }),
+  extractDocx: (fileName: string, dataBase64: string) =>
+    request<ExtractDocxResult>("POST", "/notes/extract-docx", { fileName, dataBase64 }),
   createTopic: (input: CreateTopicInput) => request<{ topicId: string; job: GenerationJob }>("POST", "/topics", input),
   topic: (id: string) => request<{ topic: Topic; cards: Card[]; job: GenerationJob | null }>("GET", `/topics/${id}`),
   deleteTopic: (id: string) => request<void>("DELETE", `/topics/${id}`),
