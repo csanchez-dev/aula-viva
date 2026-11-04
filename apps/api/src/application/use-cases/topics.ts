@@ -96,7 +96,11 @@ export class CardGeneration {
       const created = await this.cards.insertMany(userId, topic.id, fresh, this.clock.now());
       await this.jobs.complete(jobId, created);
     } catch (error) {
-      if (!(error instanceof LlmUnavailableError || error instanceof LlmBadOutputError)) {
+      if (error instanceof LlmUnavailableError) {
+        // Sin esto, una clave inválida o sin saldo solo se ve como "la IA no está disponible".
+        const cause = error.cause instanceof Error ? error.cause.message : error.message;
+        console.warn("[jobs] la IA no respondió:", cause);
+      } else if (!(error instanceof LlmBadOutputError)) {
         console.error("[jobs] fallo inesperado generando tarjetas", error);
       }
       const reserved = await this.jobs.fail(jobId, errorCodeOf(error));
