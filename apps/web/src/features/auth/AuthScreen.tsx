@@ -38,6 +38,7 @@ export function AuthScreen({ onSignedIn }: { onSignedIn: () => Promise<void> }) 
         <h1>
           Aula <span>Viva</span>
         </h1>
+        <img className="auth-logo" src="/icon.png" alt="Aula Viva" width={96} height={96} />
         <p>Sube tus apuntes y deja de olvidar lo que estudias. La IA los convierte en flashcards y preguntas tipo examen, y cada día te pide repasar justo lo que estás a punto de olvidar.</p>
         <ul className="auth-points">
           <li>Tarjetas basadas solo en tus apuntes, con el fragmento de donde salen</li>
