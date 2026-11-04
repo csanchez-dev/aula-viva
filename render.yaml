@@ -43,7 +43,7 @@ services:
       - key: WEB_ORIGIN
         sync: false # Render te lo pide al crear: la URL de Netlify, p. ej. https://aula-viva.netlify.app
       - key: AI_PROVIDER
-        value: mock # cámbialo a "anthropic" cuando añadas la clave
+        value: anthropic # necesita ANTHROPIC_API_KEY en el panel de Render; "mock" para el simulador
       - key: ANTHROPIC_API_KEY
         sync: false
       - key: AI_MODEL_SMART
