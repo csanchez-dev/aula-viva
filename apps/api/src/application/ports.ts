@@ -124,6 +124,10 @@ export interface PdfTextExtractor {
   extract(data: Uint8Array): Promise<{ text: string; pages: number }>;
 }
 
+export interface DocxTextExtractor {
+  extract(data: Uint8Array): Promise<{ text: string }>;
+}
+
 // ---------- Temas visuales (fuera del MVP, la API se conserva) ----------
 
 export interface StoredTheme {

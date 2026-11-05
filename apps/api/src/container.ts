@@ -18,6 +18,7 @@ import {
   CardGeneration,
   CreateTopic,
   DeleteTopic,
+  ExtractDocxText,
   ExtractPdfText,
   GenerateMoreCards,
   GetGenerationJob,
@@ -26,6 +27,7 @@ import { InProcessBackgroundTasks } from "./infrastructure/background";
 import type { Config } from "./infrastructure/config";
 import { createPool, type Db } from "./infrastructure/db/pool";
 import { FsrsScheduler } from "./infrastructure/fsrs-scheduler";
+import { MammothDocxExtractor } from "./infrastructure/docx-extractor";
 import { UnpdfExtractor } from "./infrastructure/pdf-extractor";
 import { PgCardRepository } from "./infrastructure/repositories/pg-card-repository";
 import { PgJobRepository } from "./infrastructure/repositories/pg-job-repository";
@@ -82,6 +84,7 @@ export function buildContainer(config: Config): { deps: HttpDeps; db: Db; backgr
       login: new LoginUser(users, hasher, tokens),
       getMe: new GetMe(users, quota),
       extractPdf: new ExtractPdfText(new UnpdfExtractor()),
+      extractDocx: new ExtractDocxText(new MammothDocxExtractor()),
       createTopic: new CreateTopic(users, topics, generation),
       getTopic: new GetTopic(topics, cards, jobs, scheduler, clock),
       deleteTopic: new DeleteTopic(topics),

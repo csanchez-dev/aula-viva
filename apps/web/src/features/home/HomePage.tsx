@@ -27,7 +27,7 @@ export function HomePage({ name }: { name: string }) {
         <p className="eyebrow">Hola, {firstName}</p>
         <h1>Sube tus primeros apuntes</h1>
         <p className="lead">
-          Pega el texto o sube el PDF de un tema. La IA lo convierte en tarjetas y preguntas tipo examen, y Aula Viva te pide
+          Pega el texto o sube el PDF o DOCX de un tema. La IA lo convierte en tarjetas y preguntas tipo examen, y Aula Viva te pide
           repasar cada día justo lo que estás a punto de olvidar.
         </p>
         <a className="button primary" href={href({ name: "new" })}>

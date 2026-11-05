@@ -36,6 +36,19 @@ export interface ExtractPdfResult {
   truncated: boolean;
 }
 
+/** Documento de Word (.docx) enviado en base64 para extraer su texto en el servidor. */
+export const ExtractDocxSchema = z.object({
+  fileName: z.string().max(200),
+  dataBase64: z.string().min(1).max(14_000_000, "El DOCX no puede pasar de 10 MB"),
+});
+export type ExtractDocxInput = z.infer<typeof ExtractDocxSchema>;
+
+export interface ExtractDocxResult {
+  text: string;
+  /** true si el texto se recortó para no pasar de NOTES_MAX_CHARS. */
+  truncated: boolean;
+}
+
 /** Un fragmento numerado de los apuntes. Las tarjetas apuntan a él para poder comprobarlas. */
 export interface SourceChunk {
   id: string;
