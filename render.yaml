@@ -51,7 +51,7 @@ services:
       - key: AI_MODEL_FAST
         value: claude-haiku-5-5
       - key: QUOTA_FREE_PER_DAY
-        value: "1" # beta: cuida el saldo de la API
+        value: "3" # beta: uso libre sin agotar el saldo de la API
       # Beta privada: correo:código,correo:código. Se define en el panel de Render, nunca aquí (el repositorio es público).
       - key: BETA_INVITES
         sync: false
