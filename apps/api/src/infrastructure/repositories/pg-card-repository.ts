@@ -204,6 +204,15 @@ export class PgCardRepository implements CardRepository {
     return rows[0]?.n ?? 0;
   }
 
+  async reviewsByDay(userId: string, since: Date): Promise<{ day: string; count: number }[]> {
+    const { rows } = await this.db.query<{ day: string; count: number }>(
+      `SELECT to_char(reviewed_at AT TIME ZONE 'America/Bogota', 'YYYY-MM-DD') AS day, count(*)::int AS count
+       FROM reviews WHERE user_id = $1 AND reviewed_at >= $2 GROUP BY 1`,
+      [userId, since],
+    );
+    return rows;
+  }
+
   async introducedSince(userId: string, since: Date): Promise<number> {
     const { rows } = await this.db.query<{ n: number }>(
       `SELECT count(*)::int AS n FROM reviews WHERE user_id = $1 AND reviewed_at >= $2 AND state_before = 'new'`,

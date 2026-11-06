@@ -6,9 +6,11 @@ import {
   type ExtractPdfResult,
   type GenerationJob,
   NOTES_MAX_CHARS,
+  PDF_MAX_PAGES,
   splitIntoChunks,
   type Topic,
 } from "@aula-viva/shared";
+import { type BetaProgram, bogotaDayStart } from "../../domain/beta";
 import { AppError } from "../../domain/errors";
 import { type Scheduler, summarizeProgress } from "../../domain/scheduling";
 import type {
@@ -60,9 +62,13 @@ export class CardGeneration {
     private readonly quota: QuotaService,
     private readonly background: BackgroundTasks,
     private readonly clock: Clock,
+    private readonly program: BetaProgram,
   ) {}
 
-  async start(userId: string, plan: "free" | "pro", topic: StoredTopic): Promise<GenerationJob> {
+  async start(user: { id: string; plan: "free" | "pro"; email: string }, topic: StoredTopic): Promise<GenerationJob> {
+    const userId = user.id;
+    const plan = user.plan;
+    await this.requireTodaysReview(user);
     const eventId = await this.quota.reserve(userId, plan, "content");
     let job: GenerationJob;
     try {
@@ -73,6 +79,23 @@ export class CardGeneration {
     }
     this.background.run(() => this.work(userId, topic, job.id));
     return job;
+  }
+
+  /** En la beta, quien tiene tarjetas pendientes debe cumplir su repaso de hoy antes de gastar saldo en otras. */
+  private async requireTodaysReview(user: { id: string; email: string }): Promise<void> {
+    if (!this.program.isTester(user.email)) return;
+    const now = this.clock.now();
+    const [due, fresh, reviewed] = await Promise.all([
+      this.cards.countDue(user.id, now),
+      this.cards.countFresh(user.id),
+      this.cards.reviewsSince(user.id, bogotaDayStart(now)),
+    ]);
+    if (due + fresh > 0 && reviewed < this.program.goal) {
+      throw new AppError(
+        "REVIEW_FIRST",
+        `Antes de crear tarjetas nuevas, repasa ${this.program.goal - reviewed} más hoy. Las que ya tienes son las que no quieres olvidar.`,
+      );
+    }
   }
 
   private async work(userId: string, topic: StoredTopic, jobId: string): Promise<void> {
@@ -125,8 +148,13 @@ export class CreateTopic {
     const chunks = splitIntoChunks(input.notes);
     if (chunks.length === 0) throw new AppError("VALIDATION_ERROR", "Los apuntes están vacíos.");
     const topic = await this.topics.create(userId, { title: input.title, subject: input.subject, chunks });
-    const job = await this.generation.start(user.id, user.plan, topic);
-    return { topic, job };
+    try {
+      return { topic, job: await this.generation.start(user, topic) };
+    } catch (error) {
+      // Sin cuota no se genera nada: no dejamos un tema vacío en su lista.
+      await this.topics.deleteForUser(userId, topic.id);
+      throw error;
+    }
   }
 }
 
@@ -143,7 +171,7 @@ export class GenerateMoreCards {
     if (!user) throw new AppError("UNAUTHENTICATED");
     const topic = await this.topics.findForUser(userId, topicId);
     if (!topic) throw new AppError("NOT_FOUND");
-    return this.generation.start(user.id, user.plan, topic);
+    return this.generation.start(user, topic);
   }
 }
 
@@ -190,6 +218,12 @@ export class ExtractPdfText {
       result = await this.extractor.extract(new Uint8Array(data));
     } catch {
       throw new AppError("VALIDATION_ERROR", "No se pudo leer el PDF. Prueba a copiar y pegar el texto.");
+    }
+    if (result.pages > PDF_MAX_PAGES) {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        `Tu PDF tiene ${result.pages} páginas y el máximo es ${PDF_MAX_PAGES}. Divídelo y sube solo el tema que quieras estudiar.`,
+      );
     }
     const text = tidyExtractedText(result.text);
     if (text.length < 50) {

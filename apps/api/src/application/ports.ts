@@ -89,6 +89,8 @@ export interface CardRepository {
   /** Guarda el nuevo estado y el registro del repaso en una sola transacción. */
   recordReview(userId: string, cardId: string, rating: number, before: SchedulingState, after: SchedulingState, at: Date): Promise<void>;
   reviewsSince(userId: string, since: Date): Promise<number>;
+  /** Repasos por día de calendario en Bogotá, desde `since`. */
+  reviewsByDay(userId: string, since: Date): Promise<{ day: string; count: number }[]>;
   /** Tarjetas nuevas que el usuario empezó a estudiar desde `since` (para el límite diario). */
   introducedSince(userId: string, since: Date): Promise<number>;
   frontsByTopic(topicId: string): Promise<string[]>;

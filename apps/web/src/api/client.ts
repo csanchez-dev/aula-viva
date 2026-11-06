@@ -1,5 +1,7 @@
 import {
   type ApiErrorBody,
+  type BetaActivityReport,
+  type BetaStatus,
   type Card,
   type CreateTopicInput,
   type Dashboard,
@@ -63,6 +65,8 @@ export const api = {
   me: () => request<MeResponse>("GET", "/me"),
 
   dashboard: () => request<Dashboard>("GET", "/dashboard"),
+  betaStatus: () => request<{ beta: BetaStatus | null }>("GET", "/beta/status"),
+  betaActivity: () => request<BetaActivityReport>("GET", "/admin/beta-activity"),
   extractPdf: (fileName: string, dataBase64: string) =>
     request<ExtractPdfResult>("POST", "/notes/extract", { fileName, dataBase64 }),
   extractDocx: (fileName: string, dataBase64: string) =>

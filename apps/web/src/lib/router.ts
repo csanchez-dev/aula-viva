@@ -9,12 +9,14 @@ export type Route =
   | { name: "new" }
   | { name: "topic"; id: string }
   | { name: "review"; topicId?: string }
-  | { name: "quiz"; id: string };
+  | { name: "quiz"; id: string }
+  | { name: "activity" };
 
 export function parseRoute(hash: string): Route {
   const parts = hash.replace(/^#\/?/, "").split("/").filter(Boolean);
   const [head, id] = parts;
   if (head === "nuevo") return { name: "new" };
+  if (head === "actividad") return { name: "activity" };
   if (head === "tema" && id) return { name: "topic", id };
   if (head === "repaso") return { name: "review", topicId: id };
   if (head === "simulacro" && id) return { name: "quiz", id };
@@ -25,6 +27,8 @@ export function href(route: Route): string {
   switch (route.name) {
     case "new":
       return "#/nuevo";
+    case "activity":
+      return "#/actividad";
     case "topic":
       return `#/tema/${route.id}`;
     case "review":

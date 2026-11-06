@@ -1,3 +1,5 @@
+import { GetBetaActivity, GetBetaStatus } from "../src/application/use-cases/beta";
+import { BetaProgram, bogotaDay, parseEmails, parseInvites } from "../src/domain/beta";
 import { randomUUID } from "node:crypto";
 import { ContentGenerator, type LlmClient, MockLlmClient } from "@aula-viva/ai";
 import type { ErrorCode, GenerationJob, Plan, SourceChunk, Theme } from "@aula-viva/shared";
@@ -180,6 +182,15 @@ export class MemoryCards implements CardRepository {
   async reviewsSince(userId: string, since: Date) {
     return this.reviews.filter((r) => r.userId === userId && r.at >= since).length;
   }
+  async reviewsByDay(userId: string, since: Date) {
+    const counts = new Map<string, number>();
+    for (const r of this.reviews) {
+      if (r.userId !== userId || r.at < since) continue;
+      const day = bogotaDay(r.at);
+      counts.set(day, (counts.get(day) ?? 0) + 1);
+    }
+    return [...counts].map(([day, count]) => ({ day, count }));
+  }
   async introducedSince(userId: string, since: Date) {
     return this.reviews.filter((r) => r.userId === userId && r.at >= since && r.stateBefore === "new").length;
   }
@@ -274,10 +285,13 @@ export const fakeHasher: PasswordHasher = {
 
 /** Extractor de PDF falso: devuelve el texto que haya después de la cabecera %PDF-. */
 export const fakePdf: PdfTextExtractor = {
-  extract: async (data) => ({ text: Buffer.from(data).toString("utf8").replace(/^%PDF-\S*\s*/, ""), pages: 1 }),
+  extract: async (data) => {
+    const raw = Buffer.from(data).toString("utf8");
+    return { text: raw.replace(/^%PDF-\S*\s*/, ""), pages: Number(raw.match(/paginas=(\d+)/)?.[1] ?? 1) };
+  },
 };
 
-export function buildTestDeps(options: { freePerDay?: number; llm?: LlmClient } = {}) {
+export function buildTestDeps(options: { freePerDay?: number; llm?: LlmClient; invites?: string; admins?: string; goal?: number } = {}) {
   const clock = new FakeClock();
   const users = new MemoryUsers();
   const topics = new MemoryTopics(clock);
@@ -290,7 +304,14 @@ export function buildTestDeps(options: { freePerDay?: number; llm?: LlmClient } 
   const tokens = new JwtTokenService("test-secret-test-secret-test-secret-123", "1h");
   const ai = new ContentGenerator(options.llm ?? new MockLlmClient(0));
   const quota = new QuotaService(usage, { perDay: { free: options.freePerDay ?? 5, pro: 100 } }, clock);
-  const generation = new CardGeneration(topics, cards, jobs, ai, quota, background, clock);
+  const beta = new BetaProgram({
+    invites: parseInvites(options.invites),
+    admins: parseEmails(options.admins),
+    start: "2026-11-02",
+    end: "2026-11-07",
+    goal: options.goal ?? 5,
+  });
+  const generation = new CardGeneration(topics, cards, jobs, ai, quota, background, clock, beta);
 
   const deps: HttpDeps = {
     tokens,
@@ -298,9 +319,9 @@ export function buildTestDeps(options: { freePerDay?: number; llm?: LlmClient } 
     trustProxy: 0,
     secureCookies: false,
     useCases: {
-      register: new RegisterUser(users, fakeHasher, tokens),
+      register: new RegisterUser(users, fakeHasher, tokens, beta),
       login: new LoginUser(users, fakeHasher, tokens),
-      getMe: new GetMe(users, quota),
+      getMe: new GetMe(users, quota, beta),
       extractPdf: new ExtractPdfText(fakePdf),
       extractDocx: new ExtractDocxText(new MammothDocxExtractor()),
       createTopic: new CreateTopic(users, topics, generation),
@@ -319,6 +340,8 @@ export function buildTestDeps(options: { freePerDay?: number; llm?: LlmClient } 
       getActiveTheme: new GetActiveTheme(users, themes),
       setActiveTheme: new SetActiveTheme(users, themes),
       changeUserPlan: new ChangeUserPlan(users),
+      betaStatus: new GetBetaStatus(users, cards, beta, clock),
+      betaActivity: new GetBetaActivity(users, cards, usage, beta, clock),
     },
   };
   return { deps, clock, users, topics, cards, jobs, usage, background };

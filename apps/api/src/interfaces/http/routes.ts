@@ -161,6 +161,15 @@ export function buildRouter(deps: HttpDeps): Router {
     res.status(204).end();
   });
 
+  // ---------- Beta privada ----------
+  router.get("/beta/status", requireAuth, async (_req, res) => {
+    res.set("Cache-Control", "no-store").json({ beta: await uc.betaStatus.execute(session(res).userId) });
+  });
+
+  router.get("/admin/beta-activity", requireAuth, async (_req, res) => {
+    res.set("Cache-Control", "no-store").json(await uc.betaActivity.execute(session(res).userId));
+  });
+
   // ---------- Administración ----------
   router.patch("/admin/users/:id/plan", requireAuth, requireRole("admin"), async (req, res) => {
     const { id } = parse(IdParam, req.params);

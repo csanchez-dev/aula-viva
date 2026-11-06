@@ -9,7 +9,9 @@ import type { ErrorCode } from "./errors";
 // ---------- Temas y apuntes ----------
 
 export const NOTES_MIN_CHARS = 200;
-export const NOTES_MAX_CHARS = 60_000;
+export const NOTES_MAX_CHARS = 30_000;
+/** Páginas máximas de un PDF: cuidan el saldo de IA que comparten los betatesters. */
+export const PDF_MAX_PAGES = 10;
 
 export const CreateTopicSchema = z.object({
   title: z.string().trim().min(2, "Ponle un título al tema").max(120),

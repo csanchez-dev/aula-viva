@@ -1,3 +1,4 @@
+import type { GetBetaActivity, GetBetaStatus } from "../../application/use-cases/beta";
 import type { TokenService } from "../../application/ports";
 import type { ChangeUserPlan } from "../../application/use-cases/admin";
 import type { GetMe, LoginUser, RegisterUser } from "../../application/use-cases/auth";
@@ -53,5 +54,8 @@ export interface HttpDeps {
     setActiveTheme: SetActiveTheme;
     // Administración
     changeUserPlan: ChangeUserPlan;
+    // Beta privada
+    betaStatus: GetBetaStatus;
+    betaActivity: GetBetaActivity;
   };
 }

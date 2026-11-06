@@ -7,6 +7,7 @@ export function AuthScreen({ onSignedIn }: { onSignedIn: () => Promise<void> }) 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -15,14 +16,14 @@ export function AuthScreen({ onSignedIn }: { onSignedIn: () => Promise<void> }) 
     setError("");
     // Misma validación que el servidor, gracias al paquete compartido.
     const parsed =
-      mode === "register" ? RegisterSchema.safeParse({ name, email, password }) : LoginSchema.safeParse({ email, password });
+      mode === "register" ? RegisterSchema.safeParse({ name, email, password, inviteCode: inviteCode || undefined }) : LoginSchema.safeParse({ email, password });
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? "Revisa los datos.");
       return;
     }
     setBusy(true);
     try {
-      if (mode === "register") await api.register(RegisterSchema.parse({ name, email, password }));
+      if (mode === "register") await api.register(RegisterSchema.parse({ name, email, password, inviteCode: inviteCode || undefined }));
       else await api.login(LoginSchema.parse({ email, password }));
       await onSignedIn();
     } catch (err) {
@@ -35,6 +36,9 @@ export function AuthScreen({ onSignedIn }: { onSignedIn: () => Promise<void> }) 
   return (
     <main className="auth">
       <section className="auth-hero">
+        <p className="beta-pill">
+          <i aria-hidden="true" /> Beta privada
+        </p>
         <h1>
           Aula <span>Viva</span>
         </h1>
@@ -50,7 +54,7 @@ export function AuthScreen({ onSignedIn }: { onSignedIn: () => Promise<void> }) 
       <form className="panel auth-card" onSubmit={submit} noValidate>
         <div className="tabs" role="group" aria-label="Acceso">
           <button type="button" aria-pressed={mode === "register"} onClick={() => setMode("register")}>
-            Crear cuenta
+            Activar acceso
           </button>
           <button type="button" aria-pressed={mode === "login"} onClick={() => setMode("login")}>
             Entrar
@@ -63,7 +67,7 @@ export function AuthScreen({ onSignedIn }: { onSignedIn: () => Promise<void> }) 
             <input id="name" type="text" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} />
           </>
         )}
-        <label htmlFor="email">Correo</label>
+        <label htmlFor="email">{mode === "register" ? "Correo donde recibiste la invitación" : "Correo"}</label>
         <input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
         <label htmlFor="password">Contraseña</label>
         <input
@@ -73,10 +77,25 @@ export function AuthScreen({ onSignedIn }: { onSignedIn: () => Promise<void> }) 
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
-        {mode === "register" && <p className="hint">Mínimo 10 caracteres, con letras y números.</p>}
+        {mode === "register" && (
+          <>
+            <p className="hint">Crea tu contraseña: mínimo 10 caracteres, con letras y números.</p>
+            <label htmlFor="invite">Código de invitación</label>
+            <input
+              id="invite"
+              type="text"
+              autoComplete="off"
+              autoCapitalize="characters"
+              spellCheck={false}
+              placeholder="AV-XXXX-XXXX"
+              value={inviteCode}
+              onChange={(e) => setInviteCode(e.target.value)}
+            />
+          </>
+        )}
 
         <button className="primary" type="submit" disabled={busy}>
-          {busy ? "Un momento…" : mode === "register" ? "Empezar gratis" : "Entrar"}
+          {busy ? "Un momento…" : mode === "register" ? "Activar mi acceso" : "Entrar"}
         </button>
         <p className="status err" role="alert">
           {error}
