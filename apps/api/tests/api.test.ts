@@ -231,3 +231,103 @@ describe("administración", () => {
     expect((await agent.patch(`/api/admin/users/${user.id}/plan`).send({ plan: "pro" }).expect(200)).body.user.plan).toBe("pro");
   });
 });
+
+describe("beta privada", () => {
+  const invited = { name: "Sara", email: "sara@uni.es", password: "corazon12345", inviteCode: "AV-SARA-1234" };
+  const options = { invites: "sara@uni.es:AV-SARA-1234,luis@uni.es:AV-LUIS-5678", admins: "jefe@uni.es", freePerDay: 5 };
+
+  async function tester(extra: Parameters<typeof buildTestDeps>[0] = {}) {
+    const ctx = buildTestDeps({ ...options, ...extra });
+    const agent = request.agent(createApp(ctx.deps));
+    await agent.post("/api/auth/register").send(invited).expect(201);
+    const create = async () => {
+      const res = await agent.post("/api/topics").send({ title: "HPB", subject: "Farmacología", notes: NOTES }).expect(202);
+      await ctx.background.flush();
+      return res.body.topicId as string;
+    };
+    return { ...ctx, agent, create };
+  }
+
+  it("solo registra con el correo invitado y su propio código", async () => {
+    const { deps } = buildTestDeps(options);
+    const app = createApp(deps);
+    const refused = [
+      { ...invited, inviteCode: undefined },
+      { ...invited, inviteCode: "AV-LUIS-5678" },
+      { ...invited, email: "intruso@uni.es" },
+    ];
+    for (const body of refused) {
+      const res = await request(app).post("/api/auth/register").send(body).expect(403);
+      expect(res.body.error.code).toBe("INVITE_REQUIRED");
+    }
+    await request(app).post("/api/auth/register").send({ ...invited, email: "SARA@uni.es", inviteCode: "av-sara-1234" }).expect(201);
+  });
+
+  it("cuenta el reto diario y la racha en hora de Bogotá", async () => {
+    const { agent, create, clock } = await tester({ goal: 3 });
+    await create();
+    expect((await agent.get("/api/me")).body.beta).toEqual({ tester: true, admin: false });
+    const review = async (n: number) => {
+      const { cards } = (await agent.get("/api/review/queue")).body;
+      for (const card of cards.slice(0, n)) await agent.post(`/api/cards/${card.id}/review`).send({ rating: 1 }).expect(200);
+    };
+    await review(3);
+    let { beta } = (await agent.get("/api/beta/status").expect(200)).body;
+    expect(beta).toMatchObject({ day: 1, totalDays: 6, goal: 3, reviewedToday: 3, streak: 1 });
+    clock.advanceDays(1);
+    ({ beta } = (await agent.get("/api/beta/status")).body);
+    expect(beta).toMatchObject({ day: 2, reviewedToday: 0, streak: 1 });
+    clock.advanceDays(1);
+    ({ beta } = (await agent.get("/api/beta/status")).body);
+    expect(beta).toMatchObject({ day: 3, streak: 0 });
+  });
+
+  it("exige el repaso de hoy antes de generar más y no deja temas vacíos", async () => {
+    const { agent, create } = await tester();
+    const topicId = await create();
+    const blocked = await agent.post(`/api/topics/${topicId}/generate`).expect(409);
+    expect(blocked.body.error.code).toBe("REVIEW_FIRST");
+    await agent.post("/api/topics").send({ title: "Otro", subject: "Farmacología", notes: NOTES }).expect(409);
+    expect((await agent.get("/api/dashboard")).body.topics).toHaveLength(1);
+  });
+
+  it("al agotar la cuota tampoco deja temas vacíos", async () => {
+    const { agent, create } = await tester({ freePerDay: 1, invites: undefined });
+    await create();
+    await agent.post("/api/topics").send({ title: "Otro", subject: "Farmacología", notes: NOTES }).expect(429);
+    expect((await agent.get("/api/dashboard")).body.topics).toHaveLength(1);
+  });
+
+  it("muestra la actividad solo a quien dirige la beta", async () => {
+    const invites = `${options.invites},jefe@uni.es:AV-JEFE-0000`;
+    const { deps, agent, create } = await tester({ invites });
+    await create();
+    await agent.get("/api/admin/beta-activity").expect(403);
+    const admin = request.agent(createApp(deps));
+    await admin.post("/api/auth/register").send({ ...invited, email: "jefe@uni.es", inviteCode: "AV-JEFE-0000" }).expect(201);
+    expect((await admin.get("/api/me")).body.beta.admin).toBe(true);
+    const report = (await admin.get("/api/admin/beta-activity").expect(200)).body;
+    const row = (email: string) => report.testers.find((t: { email: string }) => t.email === email);
+    expect(row("sara@uni.es")).toMatchObject({ registered: true, generations: 1, reviewsTotal: 0, daysDone: 0 });
+    expect(row("luis@uni.es")).toMatchObject({ registered: false, name: null, generations: 0 });
+  });
+
+  it("entrega el informe solo con el token interno", async () => {
+    const token = "t".repeat(40);
+    const { agent, deps, create } = await tester({ reportToken: token });
+    await create();
+    const app = createApp(deps);
+    await request(app).get("/api/internal/beta-report").expect(404);
+    await request(app).get("/api/internal/beta-report").set("Authorization", "Bearer otro").expect(404);
+    await agent.get("/api/internal/beta-report").expect(404);
+    const report = (await request(app).get("/api/internal/beta-report").set("Authorization", `Bearer ${token}`).expect(200)).body;
+    expect(report.testers.map((t: { email: string }) => t.email)).toEqual(["sara@uni.es", "luis@uni.es"]);
+  });
+
+  it("rechaza un PDF de más de 10 páginas", async () => {
+    const { agent } = await signedIn();
+    const pdf = Buffer.from(`%PDF-1.7\npaginas=11\n${NOTES}`).toString("base64");
+    const res = await agent.post("/api/notes/extract").send({ fileName: "x.pdf", dataBase64: pdf }).expect(400);
+    expect(res.body.error.message).toMatch(/11 páginas y el máximo es 10/);
+  });
+});

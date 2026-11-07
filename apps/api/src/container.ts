@@ -1,3 +1,5 @@
+import { GetBetaActivity, GetBetaStatus } from "./application/use-cases/beta";
+import { BetaProgram, parseEmails, parseInvites } from "./domain/beta";
 import { AnthropicLlmClient, ContentGenerator, type LlmClient, MockLlmClient } from "@aula-viva/ai";
 import type { SignOptions } from "jsonwebtoken";
 import type { Clock } from "./application/ports";
@@ -72,17 +74,25 @@ export function buildContainer(config: Config): { deps: HttpDeps; db: Db; backgr
     { perDay: { free: config.QUOTA_FREE_PER_DAY, pro: config.QUOTA_PRO_PER_DAY } },
     clock,
   );
-  const generation = new CardGeneration(topics, cards, jobs, ai, quota, background, clock);
+  const beta = new BetaProgram({
+    invites: parseInvites(config.BETA_INVITES),
+    admins: parseEmails(config.BETA_ADMIN_EMAILS),
+    start: config.BETA_START,
+    end: config.BETA_END,
+    goal: config.BETA_DAILY_GOAL,
+  });
+  const generation = new CardGeneration(topics, cards, jobs, ai, quota, background, clock, beta);
 
   const deps: HttpDeps = {
     tokens,
     webOrigin: config.WEB_ORIGIN,
     trustProxy: config.TRUST_PROXY,
     secureCookies: config.NODE_ENV === "production",
+    betaReportToken: config.BETA_REPORT_TOKEN,
     useCases: {
-      register: new RegisterUser(users, hasher, tokens),
+      register: new RegisterUser(users, hasher, tokens, beta),
       login: new LoginUser(users, hasher, tokens),
-      getMe: new GetMe(users, quota),
+      getMe: new GetMe(users, quota, beta),
       extractPdf: new ExtractPdfText(new UnpdfExtractor()),
       extractDocx: new ExtractDocxText(new MammothDocxExtractor()),
       createTopic: new CreateTopic(users, topics, generation),
@@ -101,6 +111,8 @@ export function buildContainer(config: Config): { deps: HttpDeps; db: Db; backgr
       getActiveTheme: new GetActiveTheme(users, themes),
       setActiveTheme: new SetActiveTheme(users, themes),
       changeUserPlan: new ChangeUserPlan(users),
+      betaStatus: new GetBetaStatus(users, cards, beta, clock),
+      betaActivity: new GetBetaActivity(users, cards, usage, beta, clock),
     },
   };
   return { deps, db, background };

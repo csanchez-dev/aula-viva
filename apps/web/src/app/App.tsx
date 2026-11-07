@@ -2,6 +2,7 @@ import type { MeResponse } from "@aula-viva/shared";
 import { useCallback, useEffect, useState } from "react";
 import { api, ApiError, waitForApi } from "../api/client";
 import { AuthScreen } from "../features/auth/AuthScreen";
+import { ActivityPage } from "../features/home/ActivityPage";
 import { HomePage } from "../features/home/HomePage";
 import { QuizPage } from "../features/review/QuizPage";
 import { ReviewPage } from "../features/review/ReviewPage";
@@ -74,7 +75,7 @@ export function App() {
   }
   if (session.status === "guest") return <AuthScreen onSignedIn={refresh} />;
 
-  const { user, usage } = session.me;
+  const { user, usage, beta } = session.me;
   const left = Math.max(0, usage.limit - usage.used);
   const focus = route.name === "review" || route.name === "quiz";
 
@@ -91,8 +92,18 @@ export function App() {
           <a href={href({ name: "new" })} aria-current={route.name === "new" ? "page" : undefined}>
             Nuevo tema
           </a>
+          {beta.admin && (
+            <a href={href({ name: "activity" })} aria-current={route.name === "activity" ? "page" : undefined}>
+              Actividad
+            </a>
+          )}
         </nav>
         <div className="top-actions">
+          {(beta.tester || beta.admin) && (
+            <span className="beta-pill small">
+              <i aria-hidden="true" /> Beta
+            </span>
+          )}
           <span
             className={`badge${left === 0 ? " warn" : ""}`}
             title={`Generaciones con IA. Se reinician ${new Date(usage.resetsAt).toLocaleString("es")}`}
@@ -111,6 +122,7 @@ export function App() {
         {route.name === "topic" && <TopicPage key={route.id} id={route.id} onUsage={refresh} />}
         {route.name === "review" && <ReviewPage key={route.topicId ?? "all"} topicId={route.topicId} />}
         {route.name === "quiz" && <QuizPage key={route.id} id={route.id} />}
+        {route.name === "activity" && <ActivityPage />}
       </main>
 
       <footer>Las tarjetas las genera una IA a partir de tus apuntes y pueden contener errores. Revísalas antes de estudiar.</footer>

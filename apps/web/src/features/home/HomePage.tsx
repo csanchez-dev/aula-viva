@@ -1,18 +1,22 @@
-import type { Dashboard, TopicProgress } from "@aula-viva/shared";
+import type { BetaStatus, Dashboard, TopicProgress } from "@aula-viva/shared";
 import { useEffect, useState } from "react";
 import { api, errorText } from "../../api/client";
 import { href } from "../../lib/router";
 import { ProgressBar } from "../topics/ProgressBar";
+import { BetaChallenge } from "./BetaChallenge";
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 /** Pantalla "Hoy": lo que toca repasar y el estado de cada tema. */
 export function HomePage({ name }: { name: string }) {
   const [data, setData] = useState<Dashboard | null>(null);
+  const [beta, setBeta] = useState<BetaStatus | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
     api.dashboard().then(setData, (e) => setError(errorText(e)));
+    // El reto es un extra: si falla, la pantalla sigue funcionando sin él.
+    api.betaStatus().then((r) => setBeta(r.beta), () => setBeta(null));
   }, []);
 
   if (error) return <p className="status err">{error}</p>;
@@ -23,22 +27,26 @@ export function HomePage({ name }: { name: string }) {
 
   if (data.topics.length === 0) {
     return (
+      <div className="stack-lg">
+      {beta && <BetaChallenge beta={beta} name={firstName ?? ""} pending={toStudy} />}
       <section className="panel hero empty">
         <p className="eyebrow">Hola, {firstName}</p>
         <h1>Sube tus primeros apuntes</h1>
         <p className="lead">
-          Pega el texto o sube el PDF o DOCX de un tema. La IA lo convierte en tarjetas y preguntas tipo examen, y Aula Viva te pide
+          Pega el texto o sube el PDF (máximo 10 páginas) o DOCX de un tema. La IA lo convierte en tarjetas y preguntas tipo examen, y Aula Viva te pide
           repasar cada día justo lo que estás a punto de olvidar.
         </p>
         <a className="button primary" href={href({ name: "new" })}>
           Crear mi primer tema
         </a>
       </section>
+      </div>
     );
   }
 
   return (
     <div className="stack-lg">
+      {beta && <BetaChallenge beta={beta} name={firstName ?? ""} pending={toStudy} />}
       <section className="panel hero">
         <p className="eyebrow">Hoy · {new Date().toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" })}</p>
         {toStudy > 0 ? (

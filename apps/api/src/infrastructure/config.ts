@@ -20,6 +20,15 @@ const EnvSchema = z
     AI_MODEL_FAST: z.string().default("claude-haiku-5-5"),
     QUOTA_FREE_PER_DAY: z.coerce.number().int().nonnegative().default(10),
     QUOTA_PRO_PER_DAY: z.coerce.number().int().nonnegative().default(200),
+    // Beta privada. Formato: correo:código,correo:código. Vacío = registro abierto. Nunca en el repositorio.
+    BETA_INVITES: z.string().optional(),
+    // Correos que pueden ver el panel de actividad, separados por comas.
+    BETA_ADMIN_EMAILS: z.string().optional(),
+    BETA_START: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).default("2026-11-07"),
+    BETA_END: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).default("2026-11-13"),
+    // Token largo y aleatorio para que GitHub Actions lea el informe diario y envíe los recordatorios.
+    BETA_REPORT_TOKEN: z.string().min(32).optional(),
+    BETA_DAILY_GOAL: z.coerce.number().int().positive().default(5),
   })
   .refine((env) => env.AI_PROVIDER !== "anthropic" || !!env.ANTHROPIC_API_KEY, {
     message: "AI_PROVIDER=anthropic necesita ANTHROPIC_API_KEY",
