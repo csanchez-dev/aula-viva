@@ -34,6 +34,11 @@ export class GetBetaActivity {
     const requester = await this.users.findById(userId);
     if (!requester) throw new AppError("UNAUTHENTICATED");
     if (!this.program.isAdmin(requester.email)) throw new AppError("FORBIDDEN");
+    return this.report();
+  }
+
+  /** El informe sin comprobar sesión: solo para la ruta interna protegida por token. */
+  async report(): Promise<BetaActivityReport> {
     const now = this.clock.now();
     const testers = await Promise.all(this.program.testers.map((email) => this.row(email, now)));
     return { today: bogotaDay(now), totalDays: this.program.dates().length, goal: this.program.goal, testers };

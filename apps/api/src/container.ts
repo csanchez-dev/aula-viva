@@ -88,6 +88,7 @@ export function buildContainer(config: Config): { deps: HttpDeps; db: Db; backgr
     webOrigin: config.WEB_ORIGIN,
     trustProxy: config.TRUST_PROXY,
     secureCookies: config.NODE_ENV === "production",
+    betaReportToken: config.BETA_REPORT_TOKEN,
     useCases: {
       register: new RegisterUser(users, hasher, tokens, beta),
       login: new LoginUser(users, hasher, tokens),

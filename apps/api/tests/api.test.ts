@@ -312,6 +312,18 @@ describe("beta privada", () => {
     expect(row("luis@uni.es")).toMatchObject({ registered: false, name: null, generations: 0 });
   });
 
+  it("entrega el informe solo con el token interno", async () => {
+    const token = "t".repeat(40);
+    const { agent, deps, create } = await tester({ reportToken: token });
+    await create();
+    const app = createApp(deps);
+    await request(app).get("/api/internal/beta-report").expect(404);
+    await request(app).get("/api/internal/beta-report").set("Authorization", "Bearer otro").expect(404);
+    await agent.get("/api/internal/beta-report").expect(404);
+    const report = (await request(app).get("/api/internal/beta-report").set("Authorization", `Bearer ${token}`).expect(200)).body;
+    expect(report.testers.map((t: { email: string }) => t.email)).toEqual(["sara@uni.es", "luis@uni.es"]);
+  });
+
   it("rechaza un PDF de más de 10 páginas", async () => {
     const { agent } = await signedIn();
     const pdf = Buffer.from(`%PDF-1.7\npaginas=11\n${NOTES}`).toString("base64");

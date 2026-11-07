@@ -28,6 +28,8 @@ export interface HttpDeps {
   /** Saltos de proxy de confianza (Netlify + Render = 2). Ver la guía de despliegue. */
   trustProxy: number;
   secureCookies: boolean;
+  /** Token de solo lectura para el informe diario de la beta (recordatorios automáticos). Sin él, la ruta no existe. */
+  betaReportToken?: string;
   useCases: {
     register: RegisterUser;
     login: LoginUser;

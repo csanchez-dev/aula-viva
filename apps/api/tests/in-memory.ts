@@ -291,7 +291,7 @@ export const fakePdf: PdfTextExtractor = {
   },
 };
 
-export function buildTestDeps(options: { freePerDay?: number; llm?: LlmClient; invites?: string; admins?: string; goal?: number } = {}) {
+export function buildTestDeps(options: { freePerDay?: number; llm?: LlmClient; invites?: string; admins?: string; goal?: number; reportToken?: string } = {}) {
   const clock = new FakeClock();
   const users = new MemoryUsers();
   const topics = new MemoryTopics(clock);
@@ -318,6 +318,7 @@ export function buildTestDeps(options: { freePerDay?: number; llm?: LlmClient; i
     webOrigin: "http://localhost:5173",
     trustProxy: 0,
     secureCookies: false,
+    betaReportToken: options.reportToken,
     useCases: {
       register: new RegisterUser(users, fakeHasher, tokens, beta),
       login: new LoginUser(users, fakeHasher, tokens),
