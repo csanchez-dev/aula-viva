@@ -24,8 +24,8 @@ const EnvSchema = z
     BETA_INVITES: z.string().optional(),
     // Correos que pueden ver el panel de actividad, separados por comas.
     BETA_ADMIN_EMAILS: z.string().optional(),
-    BETA_START: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).default("2026-11-06"),
-    BETA_END: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).default("2026-11-11"),
+    BETA_START: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).default("2026-11-07"),
+    BETA_END: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).default("2026-11-13"),
     BETA_DAILY_GOAL: z.coerce.number().int().positive().default(5),
   })
   .refine((env) => env.AI_PROVIDER !== "anthropic" || !!env.ANTHROPIC_API_KEY, {
