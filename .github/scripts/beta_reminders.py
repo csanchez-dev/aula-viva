@@ -96,7 +96,8 @@ def compose(t: dict, today: str, goal: int) -> tuple[str, str, str]:
 
 def main() -> None:
     env = os.environ
-    report = fetch_report(env["API_URL"].rstrip("/"), env["BETA_REPORT_TOKEN"])
+    report = fetch_report(env["API_URL"].rstrip("/"), env["BETA_REPORT_TOKEN"].strip())
+    print(f"Informe leído: {len(report['testers'])} betatesters.")
     today, goal, testers = report["today"], report["goal"], report["testers"]
     if not testers:
         sys.exit("El informe no trae betatesters: revisa BETA_INVITES en Render.")
@@ -105,7 +106,12 @@ def main() -> None:
         print(f"Hoy ({today}) está fuera del reto: no se envía nada.")
         return
 
-    sender, dry = env["GMAIL_USER"], env.get("DRY_RUN", "true") == "true"
+    # Al pegar secretos suelen colarse espacios o saltos de línea, que rompen el inicio de sesión SMTP.
+    sender = env["GMAIL_USER"].strip()
+    password = "".join(env["GMAIL_APP_PASSWORD"].split())
+    dry = env.get("DRY_RUN", "true") == "true"
+    if "@" not in sender or len(password) != 16:
+        sys.exit(f"Revisa los secretos: GMAIL_USER debe ser un correo y GMAIL_APP_PASSWORD 16 letras (tiene {len(password)}).")
     messages = []
     for t in testers:
         kind, subject, body = compose(t, today, goal)
@@ -119,7 +125,10 @@ def main() -> None:
         counts[kind] = counts.get(kind, 0) + 1
     failed = []
     with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=60) as smtp:
-        smtp.login(sender, env["GMAIL_APP_PASSWORD"])
+        try:
+            smtp.login(sender, password)
+        except smtplib.SMTPException as err:
+            sys.exit(f"Gmail rechazó el inicio de sesión ({type(err).__name__}). Revisa GMAIL_USER y la contraseña de aplicación.")
         if not dry:
             for kind, email, msg in messages:
                 try:
