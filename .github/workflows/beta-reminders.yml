@@ -1,0 +1,39 @@
+# Recordatorio diario de la beta privada: 6:38 p. m. de Bogotá (23:38 UTC), del 7 al 13 de noviembre.
+# Corre en GitHub, así que no depende de ningún computador encendido.
+# Secretos: BETA_REPORT_TOKEN (igual que en Render), GMAIL_USER y GMAIL_APP_PASSWORD (contraseña de aplicación de Google).
+# El repositorio es público: el script no imprime correos ni nombres.
+name: Recordatorios beta
+
+on:
+  schedule:
+    - cron: "38 23 7-13 11 *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Prueba: solo envía la vista previa a tu correo"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: beta-reminders
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Enviar recordatorios
+        env:
+          API_URL: https://aula-viva-api.onrender.com/api
+          BETA_REPORT_TOKEN: ${{ secrets.BETA_REPORT_TOKEN }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
+        run: python .github/scripts/beta_reminders.py
