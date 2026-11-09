@@ -25,7 +25,7 @@ const EnvSchema = z
     // Correos que pueden ver el panel de actividad, separados por comas.
     BETA_ADMIN_EMAILS: z.string().optional(),
     BETA_START: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).default("2026-11-07"),
-    BETA_END: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).default("2026-11-13"),
+    BETA_END: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).default("2026-11-14"),
     // Token largo y aleatorio para que GitHub Actions lea el informe diario y envíe los recordatorios.
     BETA_REPORT_TOKEN: z.string().min(32).optional(),
     BETA_DAILY_GOAL: z.coerce.number().int().positive().default(5),
