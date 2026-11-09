@@ -18,6 +18,8 @@ export const RegisterSchema = z.object({
     .max(128)
     .regex(/[A-Za-z]/, "Incluye al menos una letra")
     .regex(/[0-9]/, "Incluye al menos un número"),
+  /** Código personal de invitación. El servidor lo exige solo si el programa beta está activo. */
+  inviteCode: z.string().trim().max(64).optional(),
 });
 export type RegisterInput = z.infer<typeof RegisterSchema>;
 
@@ -47,5 +49,7 @@ export type PublicUser = z.infer<typeof PublicUserSchema>;
 export const MeResponseSchema = z.object({
   user: PublicUserSchema,
   usage: UsageSchema,
+  /** Papel de la persona en el programa beta privado. */
+  beta: z.object({ tester: z.boolean(), admin: z.boolean() }),
 });
 export type MeResponse = z.infer<typeof MeResponseSchema>;

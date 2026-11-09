@@ -1,3 +1,4 @@
+import type { GetBetaActivity, GetBetaStatus } from "../../application/use-cases/beta";
 import type { TokenService } from "../../application/ports";
 import type { ChangeUserPlan } from "../../application/use-cases/admin";
 import type { GetMe, LoginUser, RegisterUser } from "../../application/use-cases/auth";
@@ -27,6 +28,8 @@ export interface HttpDeps {
   /** Saltos de proxy de confianza (Netlify + Render = 2). Ver la guía de despliegue. */
   trustProxy: number;
   secureCookies: boolean;
+  /** Token de solo lectura para el informe diario de la beta (recordatorios automáticos). Sin él, la ruta no existe. */
+  betaReportToken?: string;
   useCases: {
     register: RegisterUser;
     login: LoginUser;
@@ -53,5 +56,8 @@ export interface HttpDeps {
     setActiveTheme: SetActiveTheme;
     // Administración
     changeUserPlan: ChangeUserPlan;
+    // Beta privada
+    betaStatus: GetBetaStatus;
+    betaActivity: GetBetaActivity;
   };
 }

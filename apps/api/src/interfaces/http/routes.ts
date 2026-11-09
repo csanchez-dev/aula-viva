@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import {
   CreateTopicSchema,
   ExtractDocxSchema,
@@ -161,6 +162,26 @@ export function buildRouter(deps: HttpDeps): Router {
     res.status(204).end();
   });
 
+  // ---------- Beta privada ----------
+  router.get("/beta/status", requireAuth, async (_req, res) => {
+    res.set("Cache-Control", "no-store").json({ beta: await uc.betaStatus.execute(session(res).userId) });
+  });
+
+  router.get("/admin/beta-activity", requireAuth, async (_req, res) => {
+    res.set("Cache-Control", "no-store").json(await uc.betaActivity.execute(session(res).userId));
+  });
+
+  // Informe para los recordatorios automáticos (GitHub Actions). Solo lectura, con token propio y sin cookies.
+  router.get("/internal/beta-report", async (req, res) => {
+    const expected = deps.betaReportToken;
+    const given = (req.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
+    if (!expected || !sameSecret(expected, given)) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "No encontrado" } });
+      return;
+    }
+    res.set("Cache-Control", "no-store").json(await uc.betaActivity.report());
+  });
+
   // ---------- Administración ----------
   router.patch("/admin/users/:id/plan", requireAuth, requireRole("admin"), async (req, res) => {
     const { id } = parse(IdParam, req.params);
@@ -169,4 +190,10 @@ export function buildRouter(deps: HttpDeps): Router {
   });
 
   return router;
+}
+
+function sameSecret(expected: string, given: string): boolean {
+  const a = Buffer.from(expected);
+  const b = Buffer.from(given);
+  return a.length === b.length && timingSafeEqual(a, b);
 }

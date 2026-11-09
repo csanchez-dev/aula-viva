@@ -103,7 +103,7 @@ export function NewTopicPage({ onUsage }: { onUsage: () => void }) {
       <div>
         <p className="eyebrow">Nuevo tema</p>
         <h1>Sube tus apuntes</h1>
-        <p className="lead">La IA solo usará lo que pegues aquí. Cada tarjeta mostrará el fragmento de donde sale para que puedas comprobarla.</p>
+        <p className="lead">La IA solo usará lo que pegues aquí. Cada tarjeta mostrará el fragmento de donde sale para que puedas comprobarla. Sube un solo tema: los PDF pueden tener hasta 10 páginas.</p>
       </div>
 
       <div className="grid-2">
